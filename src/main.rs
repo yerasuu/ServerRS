@@ -1,3 +1,5 @@
+mod files;
+
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use hyper::{Body, Request, Response, Server};
