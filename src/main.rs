@@ -1,28 +1,26 @@
-mod files;
+#![feature(proc_macro_hygiene, decl_macro)]
 
-use warp::Filter;
-use std::net::SocketAddr;
-use files::file;
+#[macro_use] extern crate rocket;
 
-#[tokio::main]
-async fn main() {
-    let base_folder = "public_http";
+use rocket::Config;
+use rocket::config::Environment;
+use rocket::fairing::AdHoc;
 
-    let files = file(base_folder.to_string());
-    for file in files.iter() {
-        println!("File {{\n    \"name\":\"{}\"\n    \"path\":\"{}\"\n}}",file.name(),file.path());
-    }
-
-    pretty_env_logger::init();
-    let _readme = warp::get()
-        .and(warp::path::end())
-        .and(warp::fs::file("./README.md"));
-
-    let _host = warp::header::<SocketAddr>("host");
-
-    // GET / => README.md
-    // GET /ex/... => ./examples/..
-    let routes = warp::fs::dir(base_folder).or();
-
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+#[get("/<name>")]
+fn named(name: String) -> String {
+    format!("Hello, {}!", name)
+}
+#[get("/")]
+fn index() -> String {
+    format!("Hello, Home Page!")
+}
+fn main() {
+    let config = Config::build(Environment::Development)
+        .address("127.0.0.1")
+        .port(700)
+        .workers(12)
+        .unwrap();
+    rocket::custom(config)
+        .mount("/", routes![index,named])
+        .launch();
 }
