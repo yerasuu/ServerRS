@@ -10,8 +10,8 @@ mod delete;
 extern crate rocket;
 extern crate num_cpus;
 
-use rocket::{Request, Config};
-use rocket_contrib::templates::{Template, handlebars};
+use rocket::{Config, Request, config};
+use rocket_dyn_templates::{Template, handlebars};
 
 #[derive(serde::Serialize)]
 struct TemplateContext {
@@ -30,16 +30,14 @@ fn not_found(req: &Request<'_>) -> Template {
 }
 
 use self::handlebars::{Helper, Handlebars, Context, RenderContext, Output, HelperResult, JsonRender};
-use rocket::config::Environment;
 
 fn wow_helper(
     h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext<'_>,
+    _: &mut RenderContext,
     out: &mut dyn Output,
-) -> HelperResult {
-    if let Some(param) = h.param(0) {
+) -> HelperResult {   if let Some(param) = h.param(0) {
         out.write("<b><i>")?;
         out.write(&param.value().render())?;
         out.write("</b></i>")?;
@@ -51,14 +49,10 @@ fn wow_helper(
 fn main() {
     let lcores_calc = ((num_cpus::get() as f32) * 0.75) as u16;
     let lcores = if lcores_calc > 1 { lcores_calc } else { 1 };
-    let config = Config::build(Environment::Development)
-        .address("127.0.0.1")
-        .port(8000)
-        .workers(lcores)
-        .unwrap();
+    let mut config = Config::from(config::Config::figment());
     rocket::custom(config)
         .mount("/", routes![get::index, get::hello, get::about])
-        .register(catchers![not_found])
+        .register("/",catchers![not_found])
         .attach(Template::custom(|engines| {
             engines.handlebars.register_helper("wow", Box::new(wow_helper));
         }))
